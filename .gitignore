@@ -1,0 +1,21 @@
+# Credentials and Tokens
+credentials.json
+token.json
+
+.idea/
+
+# Python Bytecode Files
+__pycache__/
+*.pyc
+
+# Email Archives and Logs
+emails/
+*.zip
+email_progress.log
+
+# OS-Specific Files
+.DS_Store
+
+# Virtual Environment
+env/
+venv/
