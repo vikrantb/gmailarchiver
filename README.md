@@ -26,7 +26,7 @@ The **Gmail Archiver** tool is a Python utility designed for downloading and arc
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/gmail_archiver.git
+   git clone https://github.com/vikrantb/gmailarchiver.git
    cd gmail_archiver
    ```
 
@@ -35,10 +35,36 @@ The **Gmail Archiver** tool is a Python utility designed for downloading and arc
    pip install -r requirements.txt
    ```
 
-3. **Set up Google API Credentials**:
-   - Go to the [Google Cloud Console](https://console.cloud.google.com/), create a project, and enable the Gmail API.
-   - Download the `credentials.json` file and save it in the `gmail_archiver` directory.
+### 3. **Set up Google API Credentials**
+1. **Create a Google Cloud Project**
+   - Go to the [Google Cloud Console Project Creation page](https://console.cloud.google.com/projectcreate).
+   - If you already have a project, skip to **Step 3.3**. Otherwise, create a new project by entering a **Project Name** and selecting **No organization** (if applicable).
+   - Click **Create** to finish creating your project.
 
+2. **Enable the Gmail API for Your Project**
+   - Once your project is created, navigate to the **Enable API and Services** page for the Gmail API by clicking [here](https://console.cloud.google.com/apis/enableflow?apiid=gmail.googleapis.com).
+   - Ensure you have the correct project selected in the top navigation bar.
+   - Click **Enable** to activate the Gmail API for your project.
+
+3. **Create OAuth 2.0 Credentials**
+   - Go to the [API Credentials page](https://console.cloud.google.com/apis/credentials) in Google Cloud Console to manage your API credentials.
+   - Select your project from the drop-down menu if it’s not already selected.
+   - If there are no existing credentials, you’ll need to create new ones:
+     1. Click **Create Credentials** and select **OAuth client ID**.
+     2. For **Application type**, choose **Desktop app**.
+     3. Name your credentials (e.g., "Gmail Archiver Credentials") and click **Create**.
+     4. A dialog will appear with the **OAuth Client ID**. Click **Download JSON** to save the `credentials.json` file.
+
+4. **Save the Credentials File**
+   - Download the `credentials.json` file to your local machine.
+   - Move the downloaded file to the directory where the Gmail Archiver script is located (e.g., `gmail_archiver/`).
+   - Rename the file to `credentials.json`.
+
+5. **Verify Setup**
+   - Open your terminal or command prompt and run the Gmail Archiver script.
+   - During the first run, the script will prompt you to authenticate. Follow the on-screen instructions to complete the OAuth authentication.
+
+> **Note**: Keep `credentials.json` secure, as it contains sensitive information. Never share this file or check it into source control.
 ---
 
 ## Usage
