@@ -85,17 +85,92 @@ Upon running, the tool will prompt you for the following information:
 
 ### Example
 
-Here’s a sample run showing the inputs and outputs:
+Here are several sample commands with explanations for running `gmail_archiver.py` with different configurations:
 
-```bash
-$ python gmail_archiver.py
+1. **Basic Archiving with Default Settings**
 
-Enter the base path for saving email archives (or press Enter for default ./gmail_archives):
-Enter the cutoff date for archiving (MM-DD-YYYY): 01-01-2022
-Do you want to delete emails from Gmail after archiving? (yes/no): yes
-```
+   ```bash
+   $ python gmail_archiver.py
+   ```
 
-This command downloads and archives emails from before January 1, 2022, saving them in `gmail_archives` and deleting them from Gmail after successful archiving.
+   This command will prompt you interactively to:
+   - Specify a base path for saving email archives (default: `./gmail_archives`).
+   - Enter a cutoff date for archiving (e.g., `MM-DD-YYYY`).
+   - Choose whether to delete emails from Gmail after archiving (type `yes` or `no`).
+
+   The script will download and archive emails, saving them in the specified base path and optionally deleting them from Gmail.
+
+---
+
+2. **Archiving Emails in a Specific Date Range**
+
+   ```bash
+   $ python gmail_archiver.py --start-date 12-31-2004 --end-date 12-31-2005 --base-path "gmail_backup"
+   ```
+
+   - `--start-date`: Sets the start date for emails to be archived (`12-31-2004`).
+   - `--end-date`: Sets the end date for emails to be archived (`12-31-2005`).
+   - `--base-path`: Specifies the directory to store the archived emails (`gmail_backup`).
+
+   This command archives emails from December 31, 2004, to December 31, 2005, and saves them in the `gmail_backup` directory. 
+
+---
+
+3. **Archiving with Deletion Enabled**
+
+   ```bash
+   $ python gmail_archiver.py --start-date 01-01-2020 --end-date 12-31-2020 --base-path "2020_archive" --delete
+   ```
+
+   - `--start-date`: Archives emails starting from January 1, 2020.
+   - `--end-date`: Archives emails up to December 31, 2020.
+   - `--base-path`: Sets the archive folder to `2020_archive`.
+   - `--delete`: Deletes archived emails from Gmail after successful download.
+
+   This command archives all emails from the year 2020 and removes them from Gmail once archived.
+
+---
+
+4. **Specifying a Custom Number of Threads**
+
+   ```bash
+   $ python gmail_archiver.py --start-date 01-01-2019 --end-date 12-31-2019 --threads 20
+   ```
+
+   - `--threads`: Sets the number of threads for processing emails concurrently (`20`).
+
+   This command archives emails for the year 2019 with a custom setting of `20` threads for concurrent processing, which may speed up the archiving process on systems with sufficient resources.
+
+---
+
+5. **Setting a High Retry Count for Rate-Limiting Issues**
+
+   ```bash
+   $ python gmail_archiver.py --start-date 01-01-2018 --end-date 12-31-2018 --retries 10
+   ```
+
+   - `--retries`: Specifies the maximum number of retries if rate limits are encountered (`10`).
+
+   This command archives emails for the year 2018 and allows up to `10` retries per email if rate limits are hit, making it more resilient in case of throttling.
+
+---
+
+6. **Combining Multiple Options**
+
+   ```bash
+   $ python gmail_archiver.py --start-date 01-01-2015 --end-date 12-31-2016 --base-path "2015_2016_backup" --delete --threads 15 --retries 7
+   ```
+
+   - Combines `--start-date`, `--end-date`, `--base-path`, `--delete`, `--threads`, and `--retries`.
+
+   This command:
+   - Archives emails from January 1, 2015, to December 31, 2016.
+   - Saves them to `2015_2016_backup`.
+   - Deletes emails from Gmail after archiving.
+   - Uses `15` threads for concurrent processing.
+   - Sets `7` retries in case of rate-limiting.
+
+   This configuration is suitable for handling a large volume of emails efficiently with resiliency against rate-limiting.
 
 ---
 
