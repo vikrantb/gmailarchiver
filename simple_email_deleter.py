@@ -1,13 +1,13 @@
+import hashlib
 import os
 import datetime
 import time
 import base64
 import email
 import shutil
+import argparse
 from email import policy
 from email.parser import BytesParser
-import hashlib
-import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -18,7 +18,13 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://mail.google.com/"]
 MAX_WORKERS = 10
 MAX_RETRIES = 5
-
+total_emails = 0
+emails_downloaded = 0
+emails_deleted = 0
+attachments_saved = 0
+space_saved = 0
+zip_files_created = 0
+original_size = 0
 
 def authenticate_gmail():
     """Authenticates the user and returns the credentials."""
@@ -42,6 +48,100 @@ def sanitize_filename(filename, max_length=100):
     """Sanitizes a string to be used as a safe filename."""
     sanitized = ''.join(c for c in filename if c.isalnum() or c in (' ', '.', '_', '-')).rstrip()
     return sanitized[:max_length]
+
+
+def summarize_statistics(start_date, end_date, base_path, query, label, delete, total_emails, emails_downloaded, emails_deleted, attachments_saved, original_size,
+                         space_saved, zip_files_created):
+    """
+    Summarizes and prints statistics about the Gmail archiving process.
+
+    Args:
+        start_date (str): The start date of the email retrieval in mm-dd-yyyy format.
+        end_date (str): The end date of the email retrieval in mm-dd-yyyy format.
+        base_path (str): Base path where emails are archived.
+        query (str): Custom Gmail search query.
+        label (str): Gmail label to filter emails.
+        delete (bool): Whether emails were deleted after archiving.
+        total_emails (int): Total number of emails retrieved from Gmail.
+        emails_downloaded (int): Number of emails successfully downloaded.
+        emails_deleted (int): Number of emails deleted (if deletion was enabled).
+        attachments_saved (int): Total number of attachments saved.
+        original_size (float): Original total size of the emails in bytes before compression.
+        space_saved (float): Total disk space saved in bytes due to compression.
+        zip_files_created (int): Number of zip files created during compression.
+    """
+    def format_size(size_in_bytes):
+        """Converts bytes to a human-readable format."""
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size_in_bytes < 1024:
+                return f"{size_in_bytes:.2f} {unit}"
+            size_in_bytes /= 1024
+        return f"{size_in_bytes:.2f} PB"
+
+    # Prepare formatted sizes
+    original_size_formatted = format_size(original_size)
+    space_saved_formatted = format_size(space_saved)
+
+    # Build the filter description
+    filters = []
+    if start_date and end_date:
+        filters.append(f"from **{start_date}** to **{end_date}**")
+    elif start_date:
+        filters.append(f"starting from **{start_date}**")
+    elif end_date:
+        filters.append(f"up to **{end_date}**")
+    if label:
+        filters.append(f"label: **'{label}'**")
+    if query:
+        filters.append(f"query: **'{query}'**")
+    filter_summary = ", ".join(filters) if filters else "**all emails**"
+
+    # Determine the action type
+    if delete:
+        action_type = (
+            f"📤 **Archived and deleted** **{emails_deleted}** emails, saving 💾 **{space_saved_formatted}** of disk space."
+        )
+    else:
+        action_type = (
+            f"📤 **Archived** **{emails_downloaded}** emails with 📎 **{attachments_saved} attachments**. "
+            f"⚠️ While emails were not deleted, this could have saved 💾 **{space_saved_formatted}**."
+        )
+
+    # Build the compression summary
+    compression_summary = f"📦 **Compression Complete**: Created **{zip_files_created}** zip files, shrinking emails from **{original_size_formatted}**."
+
+    # Construct the final message
+    final_message = (
+        f"\n✨ **Gmail Archiving Summary** ✨\n\n"
+        f"🔍 **Filters Applied**: {filter_summary}\n"
+        f"📧 **Emails Processed**: **{total_emails}**\n"
+        f"{action_type}\n"
+        f"📂 **Data Stored At**: {base_path}\n"
+        f"{compression_summary}\n\n"
+        f"🔒 Your emails are now securely archived, beautifully organized, and ready for future use! 🚀\n"
+    )
+
+    # Add ASCII art representing a secure archive
+    ascii_art = """
+          ________________________
+         |########################|
+         |#  ________________   #|
+         |# |                |  #|
+         |# | Archiving Safe |  #|
+         |# |________________|  #|
+         |########################|
+         |########################|
+         |########################|
+         |########################|
+         |########################|
+         \\########################/
+          \\______________________/
+    📨 Mission accomplished! Your data is securely saved and organized! 📂
+    """
+
+    # Combine message and ASCII art
+    print(final_message)
+    print(ascii_art)
 
 
 def prepare_email_data(email_message, msg_id):
@@ -113,38 +213,83 @@ def extract_attachment(part):
 
 
 def write_buffer_to_disk(email_buffer, folder_path):
-    """Writes buffered emails to disk."""
+    """Writes buffered emails to disk organized by year/month."""
+    global attachments_saved
     for email_data in email_buffer:
-        email_folder_path = os.path.join(folder_path, email_data['folder_name'])
-        os.makedirs(email_folder_path, exist_ok=True)
+        try:
+            # Extract year and month from email's date
+            date_str = email_data.get('date_str', '')
+            parsed_date = email.utils.parsedate_to_datetime(date_str)
+            year = parsed_date.strftime('%Y')
+            month = parsed_date.strftime('%m')
 
-        for content_type, content in email_data['content_parts']:
-            if content_type == 'text/plain':
-                filename = 'email.txt'
-            elif content_type == 'text/html':
-                filename = 'email.html'
-            else:
+            # Construct the year/month folder path
+            year_month_path = os.path.join(folder_path, year, month)
+            os.makedirs(year_month_path, exist_ok=True)  # Create year/month folder if it doesn't exist
+
+            # Create the email-specific folder
+            email_folder_path = os.path.join(year_month_path, email_data['folder_name'])
+            os.makedirs(email_folder_path, exist_ok=True)
+
+            # Save email content
+            for content_type, content in email_data['content_parts']:
+                if content_type == 'text/plain':
+                    filename = 'email.txt'
+                elif content_type == 'text/html':
+                    filename = 'email.html'
+                else:
+                    continue
+                filepath = os.path.join(email_folder_path, filename)
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(content)
+
+            # Save headers
+            headers_filepath = os.path.join(email_folder_path, 'headers.txt')
+            with open(headers_filepath, 'w', encoding='utf-8') as f:
+                f.write(f"From: {email_data['sender']}\n")
+                f.write(f"Date: {email_data['date_str']}\n")
+                f.write(f"Subject: {email_data['subject']}\n")
+                for header, value in email_data['headers'].items():
+                    f.write(f"{header}: {value}\n")
+
+            # Save attachments
+            for attachment in email_data['attachments']:
+                attachments_saved += 1
+                file_path = os.path.join(email_folder_path, attachment['filename'])
+                with open(file_path, 'wb') as f:
+                    f.write(attachment['data'])
+
+        except Exception as e:
+            print(f"Error writing email data to disk for {email_data['folder_name']}: {e}")
+
+
+def compress_month_folder(folder_path):
+    """Compresses each month-level folder."""
+    global space_saved, zip_files_created, original_size  # Declare as global to modify these variables
+
+    for root, dirs, _ in os.walk(folder_path):
+        for dir_name in dirs:
+            month_folder = os.path.join(root, dir_name)
+            if not os.path.isdir(month_folder):
                 continue
-            filepath = os.path.join(email_folder_path, filename)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(content)
-
-        headers_filepath = os.path.join(email_folder_path, 'headers.txt')
-        with open(headers_filepath, 'w', encoding='utf-8') as f:
-            f.write(f"From: {email_data['sender']}\n")
-            f.write(f"Date: {email_data['date_str']}\n")
-            f.write(f"Subject: {email_data['subject']}\n")
-            for header, value in email_data['headers'].items():
-                f.write(f"{header}: {value}\n")
-
-        for attachment in email_data['attachments']:
-            file_path = os.path.join(email_folder_path, attachment['filename'])
-            with open(file_path, 'wb') as f:
-                f.write(attachment['data'])
+            folder_size_before = sum(
+                os.path.getsize(os.path.join(dirpath, filename))
+                for dirpath, _, filenames in os.walk(month_folder)
+                for filename in filenames
+            )
+            shutil.make_archive(month_folder, 'zip', month_folder)
+            zip_files_created += 1  # Increment the global counter
+            shutil.rmtree(month_folder)
+            zip_size = os.path.getsize(f"{month_folder}.zip")
+            original_size += folder_size_before  # Increment the global counter
+            space_saved += folder_size_before - zip_size  # Increment the global space saved
 
 
 def process_email(creds, msg_id):
     """Processes a single email message."""
+    global emails_downloaded
+    global emails_deleted
+
     service = build("gmail", "v1", credentials=creds)
     retry_count = 0
     while retry_count < MAX_RETRIES:
@@ -165,8 +310,24 @@ def process_email(creds, msg_id):
             return None
 
 
-def download_emails(creds, query):
-    """Downloads emails based on the query."""
+def build_query(args):
+    """Builds the Gmail search query."""
+    query = args.query
+    if args.start_date:
+        start_date = datetime.datetime.strptime(args.start_date, "%m-%d-%Y").strftime('%Y/%m/%d')
+        query += f" after:{start_date}"
+    if args.end_date:
+        end_date = datetime.datetime.strptime(args.end_date, "%m-%d-%Y").strftime('%Y/%m/%d')
+        query += f" before:{end_date}"
+    if args.label:
+        query += f" label:{args.label}"
+    query += " -in:spam -in:trash"
+    return query.strip()
+
+
+def get_message_ids(creds, query):
+    """Fetches email message IDs based on the query."""
+    global total_emails
     service = build("gmail", "v1", credentials=creds)
     message_ids = []
     page_token = None
@@ -183,7 +344,6 @@ def download_emails(creds, query):
                 break
         except HttpError as error:
             if error.resp.status == 429:
-                print("Rate limit exceeded. Retrying in 10 seconds...")
                 time.sleep(10)
                 continue
             else:
@@ -192,45 +352,43 @@ def download_emails(creds, query):
         except Exception as e:
             print(f"Unexpected error while listing messages: {e}")
             break
+    total_emails = len(message_ids)
     return message_ids
 
-
 def delete_emails(creds, message_ids):
-    """Deletes emails by their message IDs."""
+    """
+    Deletes emails based on their message IDs.
+
+    Args:
+        creds: Authenticated Gmail API credentials.
+        message_ids (list): List of email message IDs to delete.
+
+    Returns:
+        int: Number of emails successfully deleted.
+    """
     service = build("gmail", "v1", credentials=creds)
+    deleted_count = 0
+
     try:
-        for i in range(0, len(message_ids), 1000):
+        for i in range(0, len(message_ids), 1000):  # Gmail allows batch deletion of up to 1000 emails at a time
             batch = message_ids[i:i + 1000]
             service.users().messages().batchDelete(userId="me", body={"ids": batch}).execute()
+            deleted_count += len(batch)
             print(f"Deleted {len(batch)} emails.")
     except HttpError as error:
         print(f"Error during email deletion: {error}")
     except Exception as e:
         print(f"Unexpected error during email deletion: {e}")
 
-
-def build_query(args):
-    """Builds the Gmail search query."""
-    query = args.query
-    if args.start_date:
-        start_date = datetime.datetime.strptime(args.start_date, "%m-%d-%Y").strftime('%Y/%m/%d')
-        query += f" after:{start_date}"
-    if args.end_date:
-        end_date = datetime.datetime.strptime(args.end_date, "%m-%d-%Y").strftime('%Y/%m/%d')
-        query += f" before:{end_date}"
-    if args.label:
-        query += f" label:{args.label}"
-    query += " -in:spam -in:trash"
-    return query.strip()
-
+    return deleted_count
 
 def archive_emails(args):
     """Archives emails based on arguments."""
     creds = authenticate_gmail()
     query = build_query(args)
-    message_ids = download_emails(creds, query)
+    message_ids = get_message_ids(creds, query)
 
-    folder_path = os.path.join(args.base_path, "emails")
+    folder_path = os.path.expanduser(args.base_path)
     os.makedirs(folder_path, exist_ok=True)
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -248,9 +406,28 @@ def archive_emails(args):
         if email_buffer:
             write_buffer_to_disk(email_buffer, folder_path)
 
-    if args.delete:
-        print("Deleting emails after archiving...")
-        delete_emails(creds, message_ids)
+    compress_month_folder(folder_path)
+
+    # Add email deletion logic if the `--delete` flag is passed
+    if getattr(args, "delete", False):
+        emails_deleted = delete_emails(creds, message_ids)
+
+    # Update call to include the additional arguments
+    summarize_statistics(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        base_path=args.base_path,
+        query=args.query,
+        label=args.label,
+        delete=args.delete,
+        total_emails=total_emails,
+        emails_downloaded=emails_downloaded,
+        emails_deleted=emails_deleted if args.delete else -1,
+        attachments_saved=attachments_saved,
+        original_size=space_saved + original_size,  # Update based on tracked sizes
+        space_saved=space_saved,
+        zip_files_created=zip_files_created
+    )
 
 
 if __name__ == "__main__":
