@@ -1,0 +1,10 @@
+SCOPES = ["https://mail.google.com/"]
+MAX_WORKERS = 10
+MAX_RETRIES = 5
+total_emails = 0
+emails_downloaded = 0
+emails_deleted = 0
+attachments_saved = 0
+space_saved = 0
+zip_files_created = 0
+original_size = 0
