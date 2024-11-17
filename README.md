@@ -101,7 +101,159 @@ Upon running, the tool will prompt you for the following information:
 2. **Cutoff Date**: Specify the cutoff date (in `MM-DD-YYYY` format) to download emails older than this date.
 3. **Delete Emails After Archiving**: Confirm if you'd like to delete the emails from Gmail after archiving. Type "yes" to confirm.
 
-### Example
+
+### Examples
+
+Below are several scenarios showcasing different use cases of the Gmail Archiver tool:
+
+---
+
+#### **Example 1: Basic Archiving**
+You want to archive all your emails from the start of time to the present without deleting them from Gmail. 
+
+```bash
+python gmail_archiver.py --base-path ./gmail_archives
+```
+
+**What it does?**  
+This command will archive all emails in your account to the `./gmail_archives` directory, organizing them by year and month. No emails will be deleted from Gmail.
+
+---
+
+#### **Example 2: Deleting Emails from a Specific Label**
+You left GmailArchiver Corp, and all their communication is labeled as `GmailArchiver`. Archive and delete these emails.
+
+```bash
+python gmail_archiver.py --label GmailArchiver --delete --base-path ./gmail_archives
+```
+
+**What it does?**  
+This archives all emails tagged with the `GmailArchiver` label, stores them in the specified path, and deletes them from Gmail after archiving.
+
+---
+
+#### **Example 3: Archiving Emails from a Specific Date Range**
+You want to archive emails from January 1, 2022, to December 31, 2022, without deleting them.
+
+```bash
+python gmail_archiver.py --start-date 01-01-2022 --end-date 12-31-2022 --base-path ./gmail_archives_2022
+```
+
+**What it does?**  
+This command archives all emails within the specified date range and saves them in the `./gmail_archives_2022` directory. Emails are retained in Gmail.
+
+---
+
+#### **Example 4: Archiving Emails Based on a Query**
+You want to archive emails containing the word "invoice" without deleting them.
+
+```bash
+python gmail_archiver.py --query "invoice" --base-path ./invoice_archives
+```
+
+**What it does?**  
+The tool searches for emails with "invoice" in their content or metadata and archives them in the specified directory. Emails remain in Gmail.
+
+---
+
+#### **Example 5: Archiving with Both Label and Query Filters**
+You want to archive emails labeled `Work` that mention the word "meeting."
+
+```bash
+python gmail_archiver.py --label Work --query "meeting" --base-path ./work_meeting_archives
+```
+
+**What it does?**  
+This archives all emails labeled `Work` that contain "meeting" in their content or metadata. Emails are saved in the specified directory.
+
+---
+
+#### **Example 6: Archiving and Deleting Old Emails**
+You want to archive and delete all emails received before January 1, 2021.
+
+```bash
+python gmail_archiver.py --end-date 12-31-2020 --delete --base-path ./old_emails
+```
+
+**What it does?**  
+This archives emails up to December 31, 2020, stores them in the specified directory, and deletes them from Gmail.
+
+---
+
+#### **Example 7: Archiving Emails from a Specific Start Date**
+You want to archive emails from January 1, 2023, onwards without deleting them.
+
+```bash
+python gmail_archiver.py --start-date 01-01-2023 --base-path ./recent_emails
+```
+
+**What it does?**  
+This archives emails from January 1, 2023, to the present, saving them in the specified directory.
+
+---
+
+#### **Example 8: Archiving Important Starred Emails**
+You want to archive all emails marked as `Starred` in Gmail without deleting them.
+
+```bash
+python gmail_archiver.py --label STARRED --base-path ./starred_archives
+```
+
+**What it does?**  
+This archives all starred emails into the specified directory, keeping them in Gmail.
+
+---
+
+#### **Example 9: Archiving Emails for Backup Before Leaving a Job**
+Before leaving a job, you want to archive emails tagged as `Work` for safekeeping.
+
+```bash
+python gmail_archiver.py --label Work --base-path ./job_backup --delete
+```
+
+**What it does?**  
+This archives emails labeled `Work`, stores them in the specified directory, and deletes them from Gmail.
+
+---
+
+#### **Example 10: Archiving Emails with Large Attachments**
+You want to archive emails with attachments over 10 MB in size.
+
+```bash
+python gmail_archiver.py --query "size:10485760" --base-path ./large_attachments
+```
+
+**What it does?**  
+This searches for emails with attachments larger than 10 MB, archives them, and retains them in Gmail.
+
+---
+
+#### **Example 11: Combining Start Date, Label, and Query**
+You want to archive all `Work` emails starting from January 1, 2022, containing the word "project."
+
+```bash
+python gmail_archiver.py --start-date 01-01-2022 --label Work --query "project" --base-path ./project_emails
+```
+
+**What it does?**  
+This archives all emails labeled `Work`, received after January 1, 2022, and containing the word "project."
+
+---
+
+#### **Example 12: Archiving Emails with No Query or Label**
+You want to archive all emails in your Gmail account without using specific filters.
+
+```bash
+python gmail_archiver.py --base-path ./all_emails
+```
+
+**What it does?**  
+This archives all emails, regardless of labels or queries, into the specified directory. Emails remain in Gmail.
+
+---
+
+With these examples, you can see the versatility of the Gmail Archiver tool to manage and organize your Gmail data effectively! 📨
+
 
 Here are several sample commands with explanations for running `gmail_archiver.py` with different configurations:
 
